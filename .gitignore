@@ -30,3 +30,8 @@
 *.exe
 *.out
 *.app
+
+build/*
+vcpkg_installed/*
+.vscode
+*.idx
