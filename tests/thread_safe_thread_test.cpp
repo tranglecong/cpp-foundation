@@ -1,4 +1,5 @@
 #include "thread_safe/thread.hpp"
+#include <chrono>
 #include <functional>
 #include <gtest/gtest.h>
 #include <string>
@@ -23,7 +24,7 @@ void mockExit() { std::cout << "Exit callback triggered." << std::endl; }
 // Unit Test for invoking a function with arguments and running the thread
 TEST(ThreadTest, InvokeAndRunThread) {
     // Create a thread object with the function and arguments not yet set
-    Thread<int, int, std::string> thread("TestThread", RunMode::ONCE, ThreadPriority::NORMAL);
+    Thread<int, int, std::string> thread("TestThread", ThreadPriority::NORMAL);
 
     // Set the function and arguments using invoke() before starting the thread
     bool success = thread.invoke(mockTask, 42, "Hello, World!");
@@ -35,10 +36,10 @@ TEST(ThreadTest, InvokeAndRunThread) {
     thread.setExitCallback(mockExit);
 
     // Start the thread
-    EXPECT_TRUE(thread.start()); // Ensure the thread started successfully
+    EXPECT_TRUE(thread.start(RunMode::ONCE)); // Ensure the thread started successfully
 
     // Simulate a short delay to allow thread execution
-    std::this_thread::sleep_for(std::chrono::seconds(1));
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
     // Ensure that the callbacks were triggered during execution
     SUCCEED();
@@ -47,7 +48,7 @@ TEST(ThreadTest, InvokeAndRunThread) {
 // Unit Test for using start, result, and exit callbacks
 TEST(ThreadTest, SetCallbacksAndRunThread) {
     // Create a thread object with the function and arguments not yet set
-    Thread<int, int, std::string> thread("TestThread", RunMode::ONCE, ThreadPriority::NORMAL);
+    Thread<int, int, std::string> thread("TestThread", ThreadPriority::NORMAL);
 
     // Set the function and arguments using invoke() before starting the thread
     bool success = thread.invoke(mockTask, 10, "Test");
@@ -59,10 +60,10 @@ TEST(ThreadTest, SetCallbacksAndRunThread) {
     thread.setExitCallback(mockExit);
 
     // Start the thread
-    EXPECT_TRUE(thread.start());
+    EXPECT_TRUE(thread.start(RunMode::ONCE));
 
     // Simulate a short delay to allow thread execution
-    std::this_thread::sleep_for(std::chrono::seconds(1));
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
     // Check if all callbacks were triggered
     SUCCEED(); // Ensure no errors occurred in the thread
@@ -71,7 +72,7 @@ TEST(ThreadTest, SetCallbacksAndRunThread) {
 // Unit Test for stopping the thread
 TEST(ThreadTest, StopThread) {
     // Create a thread object with the function and arguments not yet set
-    Thread<int, int, std::string> thread("TestThread", RunMode::ONCE, ThreadPriority::NORMAL);
+    Thread<int, int, std::string> thread("TestThread", ThreadPriority::NORMAL);
 
     // Set the function and arguments using invoke() before starting the thread
     bool success = thread.invoke(mockTask, 10, "Stop Test");
@@ -82,14 +83,14 @@ TEST(ThreadTest, StopThread) {
     thread.setExitCallback(mockExit);
 
     // Start the thread
-    thread.start();
+    thread.start(RunMode::LOOP);
 
     // Stop the thread
     bool stop_result = thread.stop();
     EXPECT_TRUE(stop_result); // Ensure the thread was stopped successfully
 
     // Simulate a short delay to ensure thread stops
-    std::this_thread::sleep_for(std::chrono::seconds(1));
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
     SUCCEED(); // Ensure no errors occurred in the thread.
 }
@@ -100,12 +101,12 @@ TEST(ThreadTest, RunLoopWithPredicate) {
     std::atomic<int> counter{0};
 
     // Predicate to control when the thread should stop
-    auto pred = [&counter]() {
+    auto pred = [&counter]() -> bool {
         return counter < 5; // Run the loop until counter reaches 5
     };
 
     // Create a thread in RunMode::LOOP
-    Thread<int, int, std::string> thread("LoopThread", RunMode::LOOP, ThreadPriority::NORMAL);
+    Thread<int, int, std::string> thread("LoopThread", ThreadPriority::NORMAL);
 
     // Set the function and arguments using invoke()
     bool success = thread.invoke(mockTask, 10, "Loop Test");
@@ -118,16 +119,16 @@ TEST(ThreadTest, RunLoopWithPredicate) {
     thread.setExitCallback(mockExit);
 
     // Start the thread in loop mode
-    EXPECT_TRUE(thread.start());
+    EXPECT_TRUE(thread.start(RunMode::LOOP));
 
     // Increment the counter in the main thread to allow the predicate to stop the loop
     while (counter < 5) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
         ++counter;
     }
 
     // Wait for the thread to finish
-    std::this_thread::sleep_for(std::chrono::seconds(1));
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
     // Test should pass without errors, and the thread should have run in a loop
     SUCCEED();
@@ -144,7 +145,7 @@ TEST(ThreadTest, StopLoopManually) {
     };
 
     // Create a thread in RunMode::LOOP
-    Thread<int, int, std::string> thread("LoopThreadManualStop", RunMode::LOOP, ThreadPriority::NORMAL);
+    Thread<int, int, std::string> thread("LoopThreadManualStop", ThreadPriority::NORMAL);
 
     // Set the function and arguments using invoke()
     bool success = thread.invoke(mockTask, 5, "Manual Stop Test");
@@ -156,19 +157,83 @@ TEST(ThreadTest, StopLoopManually) {
     thread.setExitCallback(mockExit);
 
     // Start the thread in loop mode
-    EXPECT_TRUE(thread.start());
+    EXPECT_TRUE(thread.start(RunMode::LOOP));
 
     // Simulate the loop running for a short time
-    std::this_thread::sleep_for(std::chrono::seconds(2));
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
     // Manually stop the thread
     EXPECT_TRUE(thread.stop());
 
     // Wait for the thread to finish stopping
-    std::this_thread::sleep_for(std::chrono::seconds(1));
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
     // Test should pass without errors, and the thread should have stopped manually
     SUCCEED();
+}
+
+// Unit Test for starting and stopping the thread multiple times
+TEST(ThreadTest, StartStopMultipleTimes) {
+    std::atomic<int> loop_counter{0}; // Atomic counter for controlling the loop
+    std::atomic<int> stop_counter{0}; // Counter to ensure the loop stops
+
+    // Predicate to control when the loop should stop
+    auto pred = [&]() -> bool {
+        loop_counter++;
+        if (loop_counter >= 5) {
+            stop_counter = 1; // Stop after 5 iterations
+            return false;
+        }
+        return true;
+    };
+
+    // Create the thread in RunMode::LOOP
+    Thread<int, int, std::string> thread("LoopThreadMultipleStop", ThreadPriority::NORMAL);
+
+    // Set the function and arguments using invoke()
+    bool success = thread.invoke(mockTask, 10, "Test Stop Multiple");
+    EXPECT_TRUE(success); // Ensure the function and arguments were set correctly
+
+    // Set the predicate, start callback, result callback, and exit callback
+    thread.setPredicate(pred);
+    thread.setStartCallback(mockStart);
+    thread.setResultCallback(mockResultCallback);
+    thread.setExitCallback(mockExit);
+
+    // Start the thread
+    EXPECT_TRUE(thread.start(RunMode::LOOP));
+    std::this_thread::sleep_for(std::chrono::milliseconds(100)); // Run for a short time
+
+    // First stop the thread
+    EXPECT_TRUE(thread.stop());
+    EXPECT_EQ(stop_counter.load(), 1); // Ensure the thread was stopped after 5 iterations
+
+    // Start the thread again
+    EXPECT_TRUE(thread.start(RunMode::LOOP));
+    loop_counter = 0; // Reset counter for the second run
+
+    // Simulate running the thread for a while again
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+    // Stop the thread again
+    EXPECT_TRUE(thread.stop());
+    EXPECT_EQ(stop_counter.load(), 1); // Ensure the thread was stopped after another 5 iterations
+
+    // Start the thread once more
+    EXPECT_TRUE(thread.start(RunMode::LOOP));
+    loop_counter = 0; // Reset counter for the third run
+
+    // Simulate running the thread for a while again
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+    // Stop the thread once more
+    EXPECT_TRUE(thread.stop());
+    EXPECT_EQ(stop_counter.load(), 1); // Ensure the thread was stopped again
+
+    // The thread should have stopped three times
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+    SUCCEED(); // Ensure no errors occurred
 }
 
 int main(int argc, char **argv) {

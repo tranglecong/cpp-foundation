@@ -41,7 +41,7 @@ void setNaitiveThreadPriority(ThreadPriority priority, const std::thread::native
 /**
  * @brief Enum to represent whether the thread should run once or in a loop.
  */
-enum class RunMode : bool { ONCE = false, LOOP = true };
+enum class RunMode : uint8_t { ONCE = 0, LOOP = 1 };
 
 /**
  * @brief A thread class that supports custom functions, thread priorities, and callbacks.
@@ -58,13 +58,11 @@ template <typename Return, typename... ArgTypes> class Thread {
     /**
      * @brief Constructor for creating a thread with a function and its arguments.
      * @param name The name of the thread.
-     * @param run_mode Whether the thread should run once or in a loop.
      * @param priority The priority of the thread.
      */
     template <class... Args>
-    Thread(const std::string &name, const RunMode run_mode = RunMode::LOOP,
-           const ThreadPriority priority = ThreadPriority::NORMAL)
-        : m_name{name}, m_loop{static_cast<bool>(run_mode)}, m_priority{priority} {}
+    Thread(const std::string &name, const ThreadPriority priority = ThreadPriority::NORMAL)
+        : m_name{name}, m_priority{priority} {}
 
     /**
      * @brief Destructor that ensures the thread stops when the object is destroyed.
@@ -120,9 +118,10 @@ template <typename Return, typename... ArgTypes> class Thread {
 
     /**
      * @brief Starts the thread.
+     * @param loop Whether the thread should run once or in a loop.
+     * @return `true` if start sucessfull, `false` otherwise.
      */
-    bool start() {
-        static bool loop{m_loop};
+    bool start(const RunMode mode) {
         if (m_thread_ptr != nullptr) {
             LOG_WARNING("The thread has already started!")
             return false;
@@ -131,13 +130,17 @@ template <typename Return, typename... ArgTypes> class Thread {
             LOG_WARNING("Cannot start because the functor has not been invoked.")
             return false;
         }
-        m_loop = loop;
+        m_loop = false;
+        if (mode == RunMode::LOOP) {
+            m_loop = true;
+        }
         m_thread_ptr = std::make_unique<std::thread>([this]() { run(); });
         LOG_INFO("Successfully started the thread");
         return true;
     }
     /**
      * @brief Stops the thread's loop.
+     * @return `true` if stop sucessfull, `false` otherwise.
      */
     bool stop() {
         m_loop = false;
@@ -163,7 +166,7 @@ template <typename Return, typename... ArgTypes> class Thread {
     const std::string m_name;
     Func m_func{nullptr};
     std::tuple<ArgTypes...> m_args{};
-    std::atomic<bool> m_loop;
+    std::atomic<bool> m_loop{true};
     ThreadPriority m_priority;
     Pred m_pred{};
     Callback m_start_callback{};
@@ -175,7 +178,7 @@ template <typename Return, typename... ArgTypes> class Thread {
      * @brief The main loop function that runs the thread.
      */
     void run() {
-        setNaitiveThreadPriority(m_priority, m_thread_ptr->native_handle());
+        // setNaitiveThreadPriority(m_priority, m_thread_ptr->native_handle());
         startCallback();
 
         do {
