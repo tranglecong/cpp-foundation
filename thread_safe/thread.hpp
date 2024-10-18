@@ -123,8 +123,12 @@ template <typename Return, typename... ArgTypes> class Thread {
      */
     bool start() {
         static bool loop{m_loop};
-        if (m_thread_ptr != nullptr || !m_func) {
+        if (m_thread_ptr != nullptr) {
             LOG_WARNING("The thread has already started!")
+            return false;
+        }
+        if (!m_func) {
+            LOG_WARNING("Cannot start because the functor has not been invoked.")
             return false;
         }
         m_loop = loop;
