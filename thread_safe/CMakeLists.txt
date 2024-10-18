@@ -1,5 +1,15 @@
 project(ThreadSafe)
 
-add_library(ThreadSafe INTERFACE)
+add_library(ThreadSafe STATIC)
 
-target_include_directories(ThreadSafe INTERFACE  ${TOP_LEVEL_PROJECT_SOURCE_DIR})
+target_sources(ThreadSafe
+    PRIVATE
+        wait.cpp
+)
+
+target_include_directories(ThreadSafe 
+    PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}
+    PUBLIC
+        ${TOP_LEVEL_PROJECT_SOURCE_DIR}
+)
