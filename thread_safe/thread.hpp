@@ -1,5 +1,6 @@
 #pragma once
-#include "common.hpp"
+#include "common/logger.hpp"
+
 #include <atomic>
 #include <cstddef>
 #include <cstdint>
@@ -9,12 +10,14 @@
 #include <memory>
 #include <thread>
 
-namespace ThreadSafe {
+namespace ThreadSafe
+{
 
 /**
  * @brief Enum to represent thread priorities.
  */
-enum class ThreadPriority : uint32_t {
+enum class ThreadPriority : uint32_t
+{
     LOWEST = 0,
     BELOW_NORMAL = 1,
     NORMAL = 2,
@@ -29,7 +32,7 @@ using NativeThreadPrioritys = std::map<ThreadPriority, int32_t>;
  * @brief Provides the default mapping of ThreadPriority to native priority values.
  * @return The map of ThreadPriority to int32_t native priority values.
  */
-const NativeThreadPrioritys &defaultNativeThreadPrioritys();
+const NativeThreadPrioritys& defaultNativeThreadPrioritys();
 
 /**
  * @brief Sets the native thread priority for a given thread.
@@ -41,17 +44,23 @@ void setNaitiveThreadPriority(ThreadPriority priority, const std::thread::native
 /**
  * @brief Enum to represent whether the thread should run once or in a loop.
  */
-enum class RunMode : uint8_t { ONCE = 0, LOOP = 1 };
+enum class RunMode : uint8_t
+{
+    ONCE = 0,
+    LOOP = 1
+};
 
 /**
  * @brief A thread class that supports custom functions, thread priorities, and callbacks.
  * @tparam Return The return type of the function.
  * @tparam ArgTypes The types of the arguments for the function.
  */
-template <typename Return, typename... ArgTypes> class Thread {
-  public:
+template<typename Return, typename... ArgTypes>
+class Thread
+{
+public:
     using Callback = std::function<void()>;
-    using ResultCallback = std::function<void(const Return &)>;
+    using ResultCallback = std::function<void(const Return&)>;
     using Func = std::function<Return(ArgTypes...)>;
     using Pred = std::function<bool()>;
 
@@ -60,14 +69,20 @@ template <typename Return, typename... ArgTypes> class Thread {
      * @param name The name of the thread.
      * @param priority The priority of the thread.
      */
-    template <class... Args>
-    Thread(const std::string &name, const ThreadPriority priority = ThreadPriority::NORMAL)
-        : m_name{name}, m_priority{priority} {}
+    template<class... Args>
+    Thread(const std::string& name, const ThreadPriority priority = ThreadPriority::NORMAL)
+        : m_name{name}
+        , m_priority{priority}
+    {
+    }
 
     /**
      * @brief Destructor that ensures the thread stops when the object is destroyed.
      */
-    ~Thread() { stop(); }
+    ~Thread()
+    {
+        stop();
+    }
 
     /**
      * @brief Sets the function and its arguments before starting the thread.
@@ -77,14 +92,20 @@ template <typename Return, typename... ArgTypes> class Thread {
      * @param args The arguments to be passed to the function.
      * @return `true` if the function and arguments were successfully set, `false` otherwise.
      */
-    template <class... Args> bool invoke(Func func, Args &&...args) {
-        if (m_thread_ptr != nullptr) {
+    template<class... Args>
+    bool invoke(Func func, Args&&... args)
+    {
+        if (m_thread_ptr != nullptr)
+        {
             return false;
         }
-        try {
+        try
+        {
             m_func = func;
             m_args = std::tuple<ArgTypes...>(std::forward<Args>(args)...);
-        } catch (std::exception e) {
+        }
+        catch (std::exception e)
+        {
             LOG_ERROR("Failed to invoke functor: " << e.what());
             return false;
         }
@@ -96,45 +117,62 @@ template <typename Return, typename... ArgTypes> class Thread {
      * @brief Sets the predicate to control the loop condition of the thread.
      * @param pred The predicate function that returns a boolean indicating whether the loop should continue.
      */
-    void setPredicate(Pred pred) { m_pred = pred; }
+    void setPredicate(Pred pred)
+    {
+        m_pred = pred;
+    }
 
     /**
      * @brief Sets the start callback function to be executed when the thread starts.
      * @param start_callback The callback function.
      */
-    void setStartCallback(Callback start_callback) { m_start_callback = start_callback; }
+    void setStartCallback(Callback start_callback)
+    {
+        m_start_callback = start_callback;
+    }
 
     /**
      * @brief Sets the result callback function to be executed with the result of the function.
      * @param result_callback The callback function to handle the result.
      */
-    void setResultCallback(ResultCallback result_callback) { m_result_callback = result_callback; }
+    void setResultCallback(ResultCallback result_callback)
+    {
+        m_result_callback = result_callback;
+    }
 
     /**
      * @brief Sets the exit callback function to be executed when the thread exits.
      * @param exit_callback The callback function.
      */
-    void setExitCallback(Callback exit_callback) { m_exit_callback = exit_callback; }
+    void setExitCallback(Callback exit_callback)
+    {
+        m_exit_callback = exit_callback;
+    }
 
     /**
      * @brief Starts the thread.
      * @param loop Whether the thread should run once or in a loop.
      * @return `true` if start sucessfull, `false` otherwise.
      */
-    bool start(const RunMode mode) {
-        if (m_thread_ptr != nullptr) {
+    bool start(const RunMode mode)
+    {
+        if (m_thread_ptr != nullptr)
+        {
             LOG_WARNING("The thread has already started!")
             return false;
         }
-        if (!m_func) {
+        if (!m_func)
+        {
             LOG_WARNING("Cannot start because the functor has not been invoked.")
             return false;
         }
         m_loop = false;
-        if (mode == RunMode::LOOP) {
+        if (mode == RunMode::LOOP)
+        {
             m_loop = true;
         }
-        m_thread_ptr = std::make_unique<std::thread>([this]() { run(); });
+        m_thread_ptr = std::make_unique<std::thread>([this]()
+                                                     { run(); });
         LOG_INFO("Successfully started the thread");
         return true;
     }
@@ -142,13 +180,16 @@ template <typename Return, typename... ArgTypes> class Thread {
      * @brief Stops the thread's loop.
      * @return `true` if stop sucessfull, `false` otherwise.
      */
-    bool stop() {
+    bool stop()
+    {
         m_loop = false;
-        if (!m_thread_ptr) {
+        if (!m_thread_ptr)
+        {
             LOG_WARNING("The thread has already stopped!")
             return false;
         }
-        if (m_thread_ptr->joinable()) {
+        if (m_thread_ptr->joinable())
+        {
             m_thread_ptr->join();
         }
         m_thread_ptr.reset();
@@ -160,9 +201,12 @@ template <typename Return, typename... ArgTypes> class Thread {
      * @brief Returns the name of the thread.
      * @return The name of the thread.
      */
-    std::string name() const { return m_name; }
+    std::string name() const
+    {
+        return m_name;
+    }
 
-  private:
+private:
     const std::string m_name;
     Func m_func{nullptr};
     std::tuple<ArgTypes...> m_args{};
@@ -177,11 +221,13 @@ template <typename Return, typename... ArgTypes> class Thread {
     /**
      * @brief The main loop function that runs the thread.
      */
-    void run() {
-        // setNaitiveThreadPriority(m_priority, m_thread_ptr->native_handle());
+    void run()
+    {
+        setNaitiveThreadPriority(m_priority, m_thread_ptr->native_handle());
         startCallback();
 
-        do {
+        do
+        {
             call();
         } while (isContinue());
 
@@ -191,9 +237,11 @@ template <typename Return, typename... ArgTypes> class Thread {
     /**
      * @brief Function to execute the function stored in the thread.
      */
-    void call() {
+    void call()
+    {
         Return result{std::apply(m_func, m_args)};
-        if (m_result_callback) {
+        if (m_result_callback)
+        {
             m_result_callback(result);
         };
     }
@@ -201,8 +249,10 @@ template <typename Return, typename... ArgTypes> class Thread {
     /**
      * @brief Function to execute the start callback.
      */
-    void startCallback() {
-        if (m_start_callback) {
+    void startCallback()
+    {
+        if (m_start_callback)
+        {
             m_start_callback();
         };
     }
@@ -210,8 +260,10 @@ template <typename Return, typename... ArgTypes> class Thread {
     /**
      * @brief Function to execute the exit callback.
      */
-    void exitCallback() {
-        if (m_exit_callback) {
+    void exitCallback()
+    {
+        if (m_exit_callback)
+        {
             m_exit_callback();
         };
     }
@@ -220,11 +272,14 @@ template <typename Return, typename... ArgTypes> class Thread {
      * @brief Function to determine whether the thread should continue running.
      * @return True if the thread should continue running, false otherwise.
      */
-    bool isContinue() {
-        if (!m_loop) {
+    bool isContinue()
+    {
+        if (!m_loop)
+        {
             return false;
         }
-        if (m_pred && !m_pred()) {
+        if (m_pred && !m_pred())
+        {
             return false;
         }
         return true;

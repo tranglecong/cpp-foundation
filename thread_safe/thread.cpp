@@ -1,4 +1,5 @@
 #include "thread.hpp"
+
 #include <cstdint>
 
 #ifdef _WIN32
@@ -8,11 +9,13 @@
 #include <sched.h>
 #endif
 
-namespace ThreadSafe {
+namespace ThreadSafe
+{
 
 constexpr int32_t MAX_NUM_OF_PRIORITY{6};
 
-const NativeThreadPrioritys &defaultNativeThreadPrioritys() {
+const NativeThreadPrioritys& defaultNativeThreadPrioritys()
+{
 #ifdef _WIN32
     static const NativeThreadPrioritys prioritys{{ThreadPriority::LOWEST, THREAD_PRIORITY_LOWEST},
                                                  {ThreadPriority::BELOW_NORMAL, THREAD_PRIORITY_BELOW_NORMAL},
@@ -38,17 +41,20 @@ const NativeThreadPrioritys &defaultNativeThreadPrioritys() {
 #endif
 };
 
-void setNaitiveThreadPriority(ThreadPriority priority, const std::thread::native_handle_type native_handle) {
-    const NativeThreadPrioritys &default_prioritys{defaultNativeThreadPrioritys()};
+void setNaitiveThreadPriority(ThreadPriority priority, const std::thread::native_handle_type native_handle)
+{
+    const NativeThreadPrioritys& default_prioritys{defaultNativeThreadPrioritys()};
 #ifdef _WIN32
-    if (!::SetThreadPriority(native_handle, default_prioritys.at(priority))) {
+    if (!::SetThreadPriority(native_handle, default_prioritys.at(priority)))
+    {
         LOG_WARNING("Failed to set thread priority");
     }
 #elif __linux__
 
     ::sched_param sch_params;
     sch_params.sched_priority = default_prioritys.at(priority);
-    if (::pthread_setschedparam(native_handle, SCHED_FIFO, &sch_params)) {
+    if (::pthread_setschedparam(native_handle, SCHED_FIFO, &sch_params))
+    {
         LOG_WARNING("Failed to set thread priority");
     }
 #endif

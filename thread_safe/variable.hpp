@@ -1,7 +1,8 @@
 #pragma once
 #include <mutex>
 
-namespace ThreadSafe {
+namespace ThreadSafe
+{
 
 /**
  * @brief A thread-safe wrapper for a variable of type T.
@@ -12,12 +13,14 @@ namespace ThreadSafe {
  *
  * @tparam T The type of the variable to be protected.
  */
-template <typename T> class Variable {
-  private:
+template<typename T>
+class Variable
+{
+private:
     T m_value{};                 ///< The encapsulated value of type T.
     mutable std::mutex m_lock{}; ///< A mutex to guard access to m_value.
 
-  public:
+public:
     /**
      * @brief Default constructor.
      *
@@ -34,7 +37,11 @@ template <typename T> class Variable {
      * @tparam Args Variadic template for argument types.
      * @param args Arguments to forward to T's constructor.
      */
-    template <typename... Args> Variable(Args &&...args) : m_value{std::forward<Args>(args)...} {}
+    template<typename... Args>
+    Variable(Args&&... args)
+        : m_value{std::forward<Args>(args)...}
+    {
+    }
 
     /**
      * @brief Thread-safe assignment operator.
@@ -43,7 +50,8 @@ template <typename T> class Variable {
      *
      * @param value The new value to assign.
      */
-    void operator=(const T &value) {
+    void operator=(const T& value)
+    {
         std::lock_guard<std::mutex> guard{m_lock};
         m_value = value;
     }
@@ -56,7 +64,8 @@ template <typename T> class Variable {
      * @param value The value to compare against.
      * @return True if the values are equal, false otherwise.
      */
-    bool operator==(const T &value) {
+    bool operator==(const T& value)
+    {
         std::lock_guard<std::mutex> guard{m_lock};
         return (m_value == value);
     }
@@ -69,7 +78,8 @@ template <typename T> class Variable {
      * @param value The value to compare against.
      * @return True if the values are not equal, false otherwise.
      */
-    bool operator!=(const T &value) {
+    bool operator!=(const T& value)
+    {
         std::lock_guard<std::mutex> guard{m_lock};
         return (m_value != value);
     }
@@ -82,7 +92,8 @@ template <typename T> class Variable {
      * @param value The value to compare against.
      * @return True if the current value is less than the given value, false otherwise.
      */
-    bool operator<(const T &value) {
+    bool operator<(const T& value)
+    {
         std::lock_guard<std::mutex> guard{m_lock};
         return (m_value < value);
     }
@@ -95,7 +106,8 @@ template <typename T> class Variable {
      * @param value The value to compare against.
      * @return True if the current value is greater than the given value, false otherwise.
      */
-    bool operator>(const T &value) {
+    bool operator>(const T& value)
+    {
         std::lock_guard<std::mutex> guard{m_lock};
         return (m_value > value);
     }
@@ -108,7 +120,8 @@ template <typename T> class Variable {
      * @param value The value to compare against.
      * @return True if the current value is less than or equal to the given value, false otherwise.
      */
-    bool operator<=(const T &value) {
+    bool operator<=(const T& value)
+    {
         std::lock_guard<std::mutex> guard{m_lock};
         return (m_value <= value);
     }
@@ -121,7 +134,8 @@ template <typename T> class Variable {
      * @param value The value to compare against.
      * @return True if the current value is greater than or equal to the given value, false otherwise.
      */
-    bool operator>=(const T &value) {
+    bool operator>=(const T& value)
+    {
         std::lock_guard<std::mutex> guard{m_lock};
         return (m_value >= value);
     }
@@ -133,7 +147,8 @@ template <typename T> class Variable {
      *
      * @return A copy of the current value.
      */
-    T get() {
+    T get()
+    {
         std::lock_guard<std::mutex> guard{m_lock};
         return m_value;
     }
@@ -145,7 +160,8 @@ template <typename T> class Variable {
      *
      * @return A copy of the current value.
      */
-    operator T() const {
+    operator T() const
+    {
         std::lock_guard<std::mutex> guard{m_lock};
         return m_value;
     }
@@ -162,9 +178,11 @@ template <typename T> class Variable {
      * @param args The arguments to pass to the callable.
      * @return The result of invoking the callable with the stored value and the provided arguments.
      */
-    template <typename F, typename... Args,
-              typename std::enable_if<!std::is_member_function_pointer<F>::value>::type * = nullptr>
-    decltype(auto) invoke(F &&func, Args &&...args) {
+    template<typename F,
+             typename... Args,
+             typename std::enable_if<!std::is_member_function_pointer<F>::value>::type* = nullptr>
+    decltype(auto) invoke(F&& func, Args&&... args)
+    {
         std::lock_guard<std::mutex> guard(m_lock);
         return std::forward<F>(func)(m_value, std::forward<Args>(args)...);
     }
@@ -182,7 +200,9 @@ template <typename T> class Variable {
      * @param args The arguments to pass to the member function.
      * @return The result of invoking the member function on the stored value.
      */
-    template <typename R, typename C, typename... Args> decltype(auto) invoke(R (C::*func)(Args...), Args &&...args) {
+    template<typename R, typename C, typename... Args>
+    decltype(auto) invoke(R (C::*func)(Args...), Args&&... args)
+    {
         std::lock_guard<std::mutex> guard(m_lock);
         return (m_value.*func)(std::forward<Args>(args)...);
     }
@@ -201,8 +221,9 @@ template <typename T> class Variable {
      * @param args The arguments to pass to the member function.
      * @return The result of invoking the const member function on the stored value.
      */
-    template <typename R, typename C, typename... Args>
-    decltype(auto) invoke(R (C::*func)(Args...) const, Args &&...args) const {
+    template<typename R, typename C, typename... Args>
+    decltype(auto) invoke(R (C::*func)(Args...) const, Args&&... args) const
+    {
         std::lock_guard<std::mutex> guard(m_lock);
         return (m_value.*func)(std::forward<Args>(args)...);
     }

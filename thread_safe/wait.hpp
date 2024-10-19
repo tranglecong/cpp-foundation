@@ -4,7 +4,8 @@
 #include <cstdint>
 #include <mutex>
 
-namespace ThreadSafe {
+namespace ThreadSafe
+{
 
 /**
  * @brief A thread-safe class for handling conditional waits.
@@ -12,12 +13,18 @@ namespace ThreadSafe {
  * This class provides mechanisms for waiting on a condition variable with support
  * for notifications, timeouts, and predicate-based conditions.
  */
-class Wait {
-  public:
+class Wait
+{
+public:
     /**
      * @brief Enumeration representing the possible status outcomes for waiting.
      */
-    enum class Status : uint32_t { SUCCESS = 0, TIMEOUT = 1, EXIT = 2 };
+    enum class Status : uint32_t
+    {
+        SUCCESS = 0,
+        TIMEOUT = 1,
+        EXIT = 2
+    };
 
     /**
      * @brief Default constructor for the Wait class.
@@ -29,10 +36,10 @@ class Wait {
      */
     ~Wait();
 
-    Wait(const Wait &) = delete;
-    Wait &operator=(const Wait &) = delete;
-    Wait(Wait &&) = delete;
-    Wait &operator=(Wait &&) = delete;
+    Wait(const Wait&) = delete;
+    Wait& operator=(const Wait&) = delete;
+    Wait(Wait&&) = delete;
+    Wait& operator=(Wait&&) = delete;
 
     /**
      * @brief Notify all waiting threads.
@@ -62,10 +69,12 @@ class Wait {
      * or an exit request is made.
      *
      * @tparam Pr The predicate type.
-     * @param pred A callable predicate that returns a boolean value indicating whether to stop waiting.
+     * @param pred A callable predicate that returns a boolean value indicating whether to stop
+     * waiting.
      * @return The status of the wait operation, either `Status::SUCCESS` or `Status::EXIT`.
      */
-    template <typename Pr> Status wait(Pr pred);
+    template<typename Pr>
+    Status wait(Pr pred);
 
     /**
      * @brief Block the calling thread for a specified duration or until exit is requested.
@@ -76,9 +85,11 @@ class Wait {
      * @tparam Repr The type of the duration's representation.
      * @tparam Period The period of the duration.
      * @param timeout The duration to wait for.
-     * @return The status of the wait operation, either `Status::SUCCESS`, `Status::TIMEOUT`, or `Status::EXIT`.
+     * @return The status of the wait operation, either `Status::SUCCESS`, `Status::TIMEOUT`, or
+     * `Status::EXIT`.
      */
-    template <class Repr, class Period> Wait::Status waitFor(const std::chrono::duration<Repr, Period> &timeout);
+    template<class Repr, class Period>
+    Wait::Status waitFor(const std::chrono::duration<Repr, Period>& timeout);
 
     /**
      * @brief Block the calling thread for a specified duration or until the predicate returns true.
@@ -90,17 +101,19 @@ class Wait {
      * @tparam Period The period of the duration.
      * @tparam Pr The predicate type.
      * @param timeout The duration to wait for.
-     * @param pred A callable predicate that returns a boolean value indicating whether to stop waiting.
-     * @return The status of the wait operation, either `Status::SUCCESS`, `Status::TIMEOUT`, or `Status::EXIT`.
+     * @param pred A callable predicate that returns a boolean value indicating whether to stop
+     * waiting.
+     * @return The status of the wait operation, either `Status::SUCCESS`, `Status::TIMEOUT`, or
+     * `Status::EXIT`.
      */
-    template <class Repr, class Period, typename Pr>
-    Status waitFor(const std::chrono::duration<Repr, Period> &timeout, Pr pred);
+    template<class Repr, class Period, typename Pr>
+    Status waitFor(const std::chrono::duration<Repr, Period>& timeout, Pr pred);
 
-  private:
-    mutable std::mutex m_lock;                     /**< Mutex for thread-safe access */
-    std::condition_variable m_condition;           /**< Condition variable for signaling */
-    std::atomic<bool> m_exit{false};               /**< Atomic flag indicating an exit request */
-    std::atomic<bool> m_internal_pred_flag{false}; /**< Internal predicate flag used for signaling */
+private:
+    mutable std::mutex m_lock;                     ///< Mutex for thread-safe access
+    std::condition_variable m_condition;           ///< Condition variable for signaling
+    std::atomic<bool> m_exit{false};               ///< Atomic flag indicating an exit request
+    std::atomic<bool> m_internal_pred_flag{false}; ///< Internal predicate flag used for signaling
 
     /**
      * @brief Check if an exit request has been made.
@@ -136,36 +149,49 @@ class Wait {
     void disableInternalPred();
 };
 
-template <typename Pr> Wait::Status Wait::wait(Pr pred) {
+template<typename Pr>
+Wait::Status Wait::wait(Pr pred)
+{
     std::unique_lock<std::mutex> lock(m_lock);
-    m_condition.wait(lock, [this, &pred]() -> bool { return isExit() || pred(); });
-    if (isExit()) {
+    m_condition.wait(lock, [this, &pred]() -> bool
+                     { return isExit() || pred(); });
+    if (isExit())
+    {
         return Status::EXIT;
     }
     return Status::SUCCESS;
 }
 
-template <class Repr, class Period> Wait::Status Wait::waitFor(const std::chrono::duration<Repr, Period> &timeout) {
+template<class Repr, class Period>
+Wait::Status Wait::waitFor(const std::chrono::duration<Repr, Period>& timeout)
+{
     enableInternalPred();
     std::unique_lock<std::mutex> lock(m_lock);
-    bool status{m_condition.wait_for(lock, timeout, [this]() -> bool { return isExit() || internalPred(); })};
-    if (!status) {
+    bool status{m_condition.wait_for(lock, timeout, [this]() -> bool
+                                     { return isExit() || internalPred(); })};
+    if (!status)
+    {
         return Status::TIMEOUT;
     }
-    if (isExit()) {
+    if (isExit())
+    {
         return Status::EXIT;
     }
     return Status::SUCCESS;
 }
 
-template <class Repr, class Period, typename Pr>
-Wait::Status Wait::waitFor(const std::chrono::duration<Repr, Period> &timeout, Pr pred) {
+template<class Repr, class Period, typename Pr>
+Wait::Status Wait::waitFor(const std::chrono::duration<Repr, Period>& timeout, Pr pred)
+{
     std::unique_lock<std::mutex> lock(m_lock);
-    bool status{m_condition.wait_for(lock, timeout, [this, &pred]() -> bool { return isExit() || pred(); })};
-    if (!status) {
+    bool status{m_condition.wait_for(lock, timeout, [this, &pred]() -> bool
+                                     { return isExit() || pred(); })};
+    if (!status)
+    {
         return Status::TIMEOUT;
     }
-    if (isExit()) {
+    if (isExit())
+    {
         return Status::EXIT;
     }
     return Status::SUCCESS;
