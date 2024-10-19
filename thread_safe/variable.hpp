@@ -1,4 +1,6 @@
 #pragma once
+#include "common/common.hpp"
+
 #include <mutex>
 
 namespace ThreadSafe
@@ -42,6 +44,9 @@ public:
         : m_value{std::forward<Args>(args)...}
     {
     }
+
+    // Make this class uncopyable
+    UNCOPYABLE(Variable);
 
     /**
      * @brief Thread-safe assignment operator.

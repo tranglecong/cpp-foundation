@@ -1,7 +1,5 @@
 #include "thread.hpp"
 
-#include <cstdint>
-
 #ifdef _WIN32
 #include <windows.h>
 #elif __linux__

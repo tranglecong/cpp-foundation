@@ -1,11 +1,9 @@
 #pragma once
-#include "common/logger.hpp"
+#include "common/common.hpp"
 
 #include <atomic>
-#include <cstddef>
 #include <cstdint>
 #include <functional>
-#include <iostream>
 #include <map>
 #include <memory>
 #include <thread>
@@ -83,6 +81,9 @@ public:
     {
         stop();
     }
+
+    // Make this class uncopyable
+    UNCOPYABLE(Thread);
 
     /**
      * @brief Sets the function and its arguments before starting the thread.

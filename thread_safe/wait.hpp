@@ -1,7 +1,8 @@
 #pragma once
+#include "common/common.hpp"
+
 #include <atomic>
 #include <condition_variable>
-#include <cstdint>
 #include <mutex>
 
 namespace ThreadSafe
@@ -36,10 +37,8 @@ public:
      */
     ~Wait();
 
-    Wait(const Wait&) = delete;
-    Wait& operator=(const Wait&) = delete;
-    Wait(Wait&&) = delete;
-    Wait& operator=(Wait&&) = delete;
+    // Make this class uncopyable
+    UNCOPYABLE(Wait);
 
     /**
      * @brief Notify all waiting threads.
