@@ -37,3 +37,25 @@
     ClassName& operator=(const ClassName&) = delete; \
     ClassName(ClassName&&) = delete;                 \
     ClassName& operator=(ClassName&&) = delete;
+
+/**
+ *  @brief Macro to enforce the Rule of Five for a given class.
+ *
+ *  This macro generates the necessary declarations for the five special member functions:
+ *  - Destructor
+ *  - Copy Constructor
+ *  - Copy Assignment Operator
+ *  - Move Constructor
+ *  - Move Assignment Operator
+ *
+ *  It is intended to be used in classes that manage resources (e.g., dynamic memory, file handles)
+ *  to ensure proper resource management and avoid memory leaks or undefined behavior.
+ *
+ *  @param className The name of the class for which the Rule of Five is being enforced.
+ */
+#define RULE_OF_FIVE(className)                   \
+    ~className();                                 \
+    className(const className& other);            \
+    className& operator=(const className& other); \
+    className(className&& other) noexcept;        \
+    className& operator=(className&& other) noexcept;
