@@ -106,20 +106,65 @@ public:
     void closePop();
 
     /**
-     * @brief Push an element into the queue.
-     * @param elem Element to push.
-     * @param timeout_ms Timeout in milliseconds. Defaults to WAIT_FOREVER.
-     * @return True if the element was pushed successfully, false otherwise.
+     * @brief Attempts to push an element into the queue with an optional timeout.
+     *
+     * This function attempts to add an element to the queue.
+     * If the queue is full, the function handles discard policies:
+     * - If `DISCARD_OLDEST` is set, the oldest element is removed to make room for the new one.
+     * - If `DISCARD_NEWEST` is set, the element being pushed is discarded if the queue is full.
+     * - If `NO_DISCARD` is set, block with `timeout_ms` until queue not full or push closed.
+     *
+     * @param elem The element to push into the queue.
+     * @param timeout_ms The maximum time to wait in milliseconds. Defaults to `WAIT_FOREVER`
+     *                   to wait indefinitely.
+     * @return `true` if the element was successfully pushed, `false` if the queue was full and no discard
+     *         was allowed, or if the queue was closed for push operations.
      */
     bool push(const T& elem, const uint32_t timeout_ms = WAIT_FOREVER);
 
     /**
-     * @brief Pop an element from the queue.
-     * @param elem Reference to store the popped element.
-     * @param timeout_ms Timeout in milliseconds. Defaults to WAIT_FOREVER.
-     * @return True if an element was popped successfully, false otherwise.
+     * @brief Attempts to pop an element from the queue with an optional timeout.
+     *
+     * This function attempts to remove an element from the queue. If the queue is empty, the function
+     * will block until an element becomes available or the specified timeout expires. If the queue
+     * is closed for pop operations or the timeout is reached before an element becomes available, the
+     * pop operation will fail and return `false`.
+     *
+     * @param elem Reference where the popped element will be stored.
+     * @param timeout_ms The maximum time to wait in milliseconds. Defaults to `WAIT_FOREVER`
+     *                   to wait indefinitely.
+     * @return `true` if an element was successfully popped from the queue, `false` if the queue was
+     *         empty and the timeout was reached or the queue was closed for pop operations.
      */
     bool pop(T& elem, const uint32_t timeout_ms = WAIT_FOREVER);
+
+    /**
+     * @brief Waits until the queue is open for pushing or until the specified timeout expires.
+     *
+     * This function blocks the calling thread until the queue is open for push operations.
+     * If the queue is already open, it returns immediately. If the queue is closed,
+     * the thread will wait until it becomes open or the timeout is reached.
+     *
+     * @param timeout_ms The maximum time to wait in milliseconds.
+     *                   If `WAIT_FOREVER` (default), it waits indefinitely.
+     * @return `true` if the queue is open for push operations within the timeout period,
+     *         `false` if the timeout was reached or the queue was not opened.
+     */
+    bool waitPushOpen(const uint32_t timeout_ms = WAIT_FOREVER);
+
+    /**
+     * @brief Waits until the queue is open for popping or until the specified timeout expires.
+     *
+     * This function blocks the calling thread until the queue is open for pop operations.
+     * If the queue is already open, it returns immediately. If the queue is closed,
+     * the thread will wait until it becomes open or the timeout is reached.
+     *
+     * @param timeout_ms The maximum time to wait in milliseconds.
+     *                   If `WAIT_FOREVER` (default), it waits indefinitely.
+     * @return `true` if the queue is open for pop operations within the timeout period,
+     *         `false` if the timeout was reached or the queue was not opened.
+     */
+    bool waitPopOpen(const uint32_t timeout_ms = WAIT_FOREVER);
 
 private:
     const Settings m_settings;                   ///< Queue settings.
@@ -366,6 +411,32 @@ void Queue<T>::updateStatus()
         m_status = Status::NORMAL;
     }
     m_wait.notify();
+}
+
+template<typename T>
+bool Queue<T>::waitPushOpen(const uint32_t timeout_ms)
+{
+    Wait::Status result{
+        m_wait.waitFor(std::chrono::milliseconds(timeout_ms), [this]() -> bool
+                       { return m_open_push; })};
+    if (result != Wait::Status::SUCCESS)
+    {
+        return false;
+    }
+    return true;
+}
+
+template<typename T>
+bool Queue<T>::waitPopOpen(const uint32_t timeout_ms)
+{
+    Wait::Status result{
+        m_wait.waitFor(std::chrono::milliseconds(timeout_ms), [this]() -> bool
+                       { return m_open_pop; })};
+    if (result != Wait::Status::SUCCESS)
+    {
+        return false;
+    }
+    return true;
 }
 
 } // namespace ThreadSafe

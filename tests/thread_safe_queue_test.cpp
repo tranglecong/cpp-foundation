@@ -238,6 +238,28 @@ TEST(QueueTest, ClosedQueue)
     ASSERT_FALSE(queue.pop(value)); // Pop should fail when queue is closed.
 }
 
+/**
+ * @brief Test for waitPushOpen and waitPopOpen.
+ */
+TEST(QueueTest, WaitOpenTest)
+{
+    Queue::Settings settings;
+    settings.control = Queue::Control::FULL_CONTROL;
+    Queue queue(settings);
+
+    queue.closePush();
+    ASSERT_FALSE(queue.waitPushOpen(100)); // Wait for push should time out.
+
+    queue.openPush();
+    ASSERT_TRUE(queue.waitPushOpen(100)); // Now it should succeed.
+
+    queue.closePop();
+    ASSERT_FALSE(queue.waitPopOpen(100)); // Wait for pop should time out.
+
+    queue.openPop();
+    ASSERT_TRUE(queue.waitPopOpen(100)); // Now it should succeed.
+}
+
 int main(int argc, char** argv)
 {
     ::testing::InitGoogleTest(&argc, argv);
